@@ -1,0 +1,140 @@
+diff --git a/minui/Android.mk b/minui/Android.mk
+index d0b8999..fcaab6f 100644
+--- a/minui/Android.mk
++++ b/minui/Android.mk
+@@ -12,10 +12,10 @@ LOCAL_C_INCLUDES +=\
+     external/libpng\
+     external/zlib
+ 
+-ifeq ($(call is-vendor-board-platform,QCOM),true)
+-  LOCAL_ADDITIONAL_DEPENDENCIES := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
+-  LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+-endif
++#ifeq ($(call is-vendor-board-platform,QCOM),true)
++  #LOCAL_ADDITIONAL_DEPENDENCIES := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
++  #LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
++#endif
+ 
+ ifeq ($(TARGET_USES_QCOM_BSP), true)
+     LOCAL_CFLAGS += -DMSM_BSP
+diff --git a/minui/graphics.c b/minui/graphics.c
+index a578f69..e5cfb8a 100644
+--- a/minui/graphics.c
++++ b/minui/graphics.c
+@@ -100,6 +100,7 @@ static int get_framebuffer(GGLSurface *fb)
+         perror("cannot open fb0");
+         return -1;
+     }
++    fprintf(stderr, "fd for framebuffer is: %d\n", fd);
+ 
+     if (ioctl(fd, FBIOGET_VSCREENINFO, &vi) < 0) {
+         perror("failed to get fb0 info");
+@@ -107,20 +108,47 @@ static int get_framebuffer(GGLSurface *fb)
+         return -1;
+     }
+ 
++    fprintf(stderr, "var_screeninfo == {\n");
++    fprintf(stderr, "   xres == %u\n", vi.xres);
++    fprintf(stderr, "   yres == %u\n", vi.yres);
++    fprintf(stderr, "   xres_virtual == %u\n", vi.xres_virtual);
++    fprintf(stderr, "   yres_virtual == %u\n", vi.yres_virtual);
++    fprintf(stderr, "   bits_per_pixel == %u\n", vi.bits_per_pixel);
++    fprintf(stderr, "   grayscale == %u\n", vi.grayscale);
++    fprintf(stderr, "   nonstd == %u\n", vi.nonstd);
++    fprintf(stderr, "   activate == %u\n", vi.activate);
++    fprintf(stderr, "   height == %u\n", vi.height);
++    fprintf(stderr, "   width == %u\n", vi.width);
++    fprintf(stderr, "   reserved[0] == %u\n", vi.reserved[0]);
++    fprintf(stderr, "   reserved[1] == %u\n", vi.reserved[1]);
++    fprintf(stderr, "   reserved[2] == %u\n", vi.reserved[2]);
++    fprintf(stderr, "   reserved[3] == %u\n", vi.reserved[3]);
++    fprintf(stderr, "}\n");
+     if (ioctl(fd, FBIOGET_FSCREENINFO, &fi) < 0) {
+         perror("failed to get fb0 info");
+         close(fd);
+         return -1;
+     }
+ 
++    fprintf(stderr, "fix_screeninfo == {\n");
++    fprintf(stderr, "   id == %s\n", fi.id);
++    fprintf(stderr, "   smem_len == %d\n", fi.smem_len);
++    fprintf(stderr, "   type == %u\n", fi.type);
++    fprintf(stderr, "   line_length == %u\n", fi.line_length);
++    fprintf(stderr, "   visual == %u\n", fi.visual);
++    fprintf(stderr, "}\n");
++
+     has_overlay = target_has_overlay(fi.id);
+ 
++    fprintf(stderr, "target has overlay:%s\n", has_overlay ? "true": "false" );
++
+     if(isTargetMdp5())
+         setDisplaySplit();
+ 
+     if (!has_overlay) {
+        vi.bits_per_pixel = PIXEL_SIZE * 8;
+        if (PIXEL_FORMAT == GGL_PIXEL_FORMAT_BGRA_8888) {
++         fprintf(stderr, "BGRA\n");
+          vi.red.offset     = 8;
+          vi.red.length     = 8;
+          vi.green.offset   = 16;
+@@ -130,6 +158,7 @@ static int get_framebuffer(GGLSurface *fb)
+          vi.transp.offset  = 0;
+          vi.transp.length  = 8;
+        } else if (PIXEL_FORMAT == GGL_PIXEL_FORMAT_RGBX_8888) {
++         fprintf(stderr, "RGBX\n");
+          vi.red.offset     = 24;
+          vi.red.length     = 8;
+          vi.green.offset   = 16;
+@@ -139,6 +168,7 @@ static int get_framebuffer(GGLSurface *fb)
+          vi.transp.offset  = 0;
+          vi.transp.length  = 8;
+        } else { /* RGB565*/
++         fprintf(stderr, "RGB\n");
+          vi.red.offset     = 11;
+          vi.red.length     = 5;
+          vi.green.offset   = 5;
+@@ -159,6 +189,14 @@ static int get_framebuffer(GGLSurface *fb)
+            return -1;
+        }
+ 
++       fprintf(stderr, "fix_screeninfo == {\n");
++       fprintf(stderr, "   id == %s\n", fi.id);
++       fprintf(stderr, "   smem_len == %d\n", fi.smem_len);
++       fprintf(stderr, "   type == %u\n", fi.type);
++       fprintf(stderr, "   line_length == %u\n", fi.line_length);
++       fprintf(stderr, "   visual == %u\n", fi.visual);
++       fprintf(stderr, "}\n");
++
+        bits = mmap(0, fi.smem_len, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+        if (bits == MAP_FAILED) {
+            perror("failed to mmap framebuffer");
+diff --git a/roots.c b/roots.c
+index 190b0cc..f59daca 100644
+--- a/roots.c
++++ b/roots.c
+@@ -169,6 +169,7 @@ int try_mount(const char* device, const char* mount_point, const char* fs_type,
+     else {
+         char mount_cmd[PATH_MAX];
+         sprintf(mount_cmd, "mount -t %s -o%s %s %s", fs_type, fs_options, device, mount_point);
++        LOGI("Mount with cmd: %s\n", mount_cmd);
+         ret = __system(mount_cmd);
+     }
+     if (ret == 0)
+@@ -300,6 +301,7 @@ int ensure_path_mounted_at_mount_point(const char* path, const char* mount_point
+         // let's try mounting with the mount binary and hope for the best.
+         char mount_cmd[PATH_MAX];
+         sprintf(mount_cmd, "mount %s", mount_point);
++        LOGI("Mount with cmd: %s\n", mount_cmd);
+         return __system(mount_cmd);
+     }
+ 
+@@ -477,7 +479,8 @@ int is_data_media_preserved() {
+ void setup_legacy_storage_paths() {
+     char* primary_path = get_primary_storage_path();
+ 
+-    if (!is_data_media_volume_path(primary_path)) {
++    if (!is_data_media_volume_path(primary_path) &&
++            strcmp("/sdcard", primary_path) != 0) {
+         rmdir("/sdcard");
+         symlink(primary_path, "/sdcard");
+     }

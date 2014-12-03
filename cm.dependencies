@@ -1,0 +1,6 @@
+[
+  {
+    "repository": "android_hardware_qcom_display-mdss",
+    "target_path": "hardware/qcom/display-mdss"
+  }
+]
