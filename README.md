@@ -9,7 +9,7 @@ HOWTO
 
 2.  Edit `.repo/manifest.xml` and add the following section:
 
-        <project path="device/coolpad/cp5310" name="huiyiqun/device_coolpad_cp5310" revision="refs/tags/master" />
+        <project path="device/coolpad/cp5310" name="huiyiqun/device_coolpad_cp5310" />
 
     If you are in China, I'll advice you to use
     [AOSP Mirror of TUNA](http://aosp.tuna.tsinghua.edu.cn) to replace the repo
